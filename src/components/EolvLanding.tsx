@@ -22,6 +22,9 @@ import {
   Eye,
   Server,
   Cookie,
+  Bot,
+  Send,
+  Wifi,
 } from "lucide-react";
 
 /* ---------- Lock Screen ---------- */
@@ -64,8 +67,7 @@ function LockScreen({ onUnlock }: { onUnlock: () => void }) {
         aria-hidden
         className="pointer-events-none absolute -top-40 left-1/2 h-[600px] w-[600px] -translate-x-1/2 rounded-full"
         style={{
-          background:
-            "radial-gradient(circle, oklch(0.72 0.16 55 / 0.35), transparent 60%)",
+          background: "radial-gradient(circle, oklch(0.72 0.16 55 / 0.35), transparent 60%)",
         }}
         animate={{ scale: [1, 1.1, 1], opacity: [0.7, 1, 0.7] }}
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
@@ -74,8 +76,7 @@ function LockScreen({ onUnlock }: { onUnlock: () => void }) {
         aria-hidden
         className="pointer-events-none absolute bottom-0 right-0 h-[500px] w-[500px] rounded-full"
         style={{
-          background:
-            "radial-gradient(circle, oklch(0.55 0.14 30 / 0.35), transparent 60%)",
+          background: "radial-gradient(circle, oklch(0.55 0.14 30 / 0.35), transparent 60%)",
         }}
         animate={{ scale: [1, 1.15, 1] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
@@ -130,10 +131,7 @@ function LockScreen({ onUnlock }: { onUnlock: () => void }) {
         transition={{ delay: 1.3, duration: 0.8 }}
         className="w-full max-w-sm"
       >
-        <div
-          ref={trackRef}
-          className="glass relative h-16 w-full overflow-hidden rounded-full"
-        >
+        <div ref={trackRef} className="glass relative h-16 w-full overflow-hidden rounded-full">
           <motion.div
             className="absolute inset-y-0 left-0 rounded-full"
             style={{
@@ -186,7 +184,7 @@ function LockScreen({ onUnlock }: { onUnlock: () => void }) {
 
 /* ---------- Dock ---------- */
 
-type PageKey = "home" | "about" | "features" | "games" | "privacy";
+type PageKey = "home" | "about" | "features" | "ai" | "games" | "privacy";
 const DOCK_ITEMS: {
   key: PageKey;
   label: string;
@@ -196,6 +194,7 @@ const DOCK_ITEMS: {
   { key: "home", label: "Home", icon: Home, gradient: "from-amber-400 to-orange-600" },
   { key: "about", label: "About", icon: Info, gradient: "from-sky-400 to-indigo-600" },
   { key: "features", label: "Features", icon: Sparkles, gradient: "from-fuchsia-400 to-rose-600" },
+  { key: "ai", label: "AI", icon: Bot, gradient: "from-violet-400 to-cyan-600" },
   { key: "games", label: "Games", icon: Gamepad2, gradient: "from-emerald-400 to-teal-600" },
   { key: "privacy", label: "Privacy", icon: ShieldCheck, gradient: "from-yellow-300 to-amber-600" },
 ];
@@ -260,13 +259,7 @@ function DockIcon({
   );
 }
 
-function Dock({
-  current,
-  onNavigate,
-}: {
-  current: PageKey;
-  onNavigate: (k: PageKey) => void;
-}) {
+function Dock({ current, onNavigate }: { current: PageKey; onNavigate: (k: PageKey) => void }) {
   const mouseX = useMotionValue(Infinity);
 
   return (
@@ -341,8 +334,7 @@ function HomePage() {
           <div
             className="h-full w-full rounded-full float-slow"
             style={{
-              background:
-                "radial-gradient(circle, oklch(0.72 0.16 55 / 0.4), transparent 60%)",
+              background: "radial-gradient(circle, oklch(0.72 0.16 55 / 0.4), transparent 60%)",
             }}
           />
         </motion.div>
@@ -392,7 +384,8 @@ function HomePage() {
       <section className="mx-auto max-w-6xl px-6 py-24">
         <Reveal>
           <h2 className="mb-16 max-w-3xl font-display text-5xl font-light leading-tight">
-            An operating system that <span className="italic text-warm-glow">breathes</span> with you.
+            An operating system that <span className="italic text-warm-glow">breathes</span> with
+            you.
           </h2>
         </Reveal>
         <div className="grid gap-6 md:grid-cols-3">
@@ -547,6 +540,134 @@ function FeaturesPage() {
   );
 }
 
+/* ---------- Free AI ---------- */
+
+const FREE_AI_ENDPOINT = "https://text.pollinations.ai";
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+function AiPage() {
+  const [prompt, setPrompt] = useState("How can I make my laptop more private?");
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: "assistant",
+      content:
+        "Hi, I’m Eolv Assistant. I use a free online API instead of Lovable AI, so you can try AI without adding a paid key.",
+    },
+  ]);
+  const [loading, setLoading] = useState(false);
+
+  const askAssistant = async () => {
+    const question = prompt.trim();
+    if (!question || loading) return;
+
+    const userMessage: ChatMessage = { role: "user", content: question };
+    setMessages((current) => [...current, userMessage]);
+    setPrompt("");
+    setLoading(true);
+
+    try {
+      const systemPrompt =
+        "You are Eolv Assistant, a friendly privacy and security helper. Keep answers casual, practical, and concise.";
+      const response = await fetch(
+        `${FREE_AI_ENDPOINT}/${encodeURIComponent(`${systemPrompt}\n\nUser: ${question}`)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`Free AI request failed with ${response.status}`);
+      }
+
+      const answer = (await response.text()).trim();
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", content: answer || "I could not generate a response this time." },
+      ]);
+    } catch {
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content:
+            "The free online AI is unavailable right now. Try again later, or ask a simpler privacy/security question.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-5xl px-6 py-24">
+      <Reveal>
+        <p className="mb-4 flex items-center gap-2 text-sm uppercase tracking-[0.3em] text-muted-foreground">
+          <Wifi className="h-4 w-4 text-warm-glow" strokeWidth={1.5} />
+          Free online API
+        </p>
+        <h1 className="max-w-3xl font-display text-6xl font-light leading-[1.05]">
+          Eolv Assistant,
+          <br />
+          <span className="italic text-warm-glow">without Lovable AI.</span>
+        </h1>
+        <p className="mt-6 max-w-2xl text-muted-foreground">
+          This page calls Pollinations text generation directly from the browser. It does not need a
+          paid key, but prompts are sent to that free online service, so avoid private information.
+        </p>
+      </Reveal>
+
+      <Reveal delay={0.15}>
+        <div className="glass mt-12 overflow-hidden rounded-3xl p-4">
+          <div className="max-h-[420px] space-y-3 overflow-y-auto p-2">
+            {messages.map((message, index) => (
+              <div
+                key={`${message.role}-${index}`}
+                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                    message.role === "user"
+                      ? "bg-warm/30 text-foreground"
+                      : "bg-black/30 text-muted-foreground"
+                  }`}
+                >
+                  {message.content}
+                </div>
+              </div>
+            ))}
+            {loading ? (
+              <div className="rounded-2xl bg-black/30 px-4 py-3 text-sm text-muted-foreground">
+                thinking with the free API…
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex gap-3 rounded-full bg-black/30 p-2">
+            <input
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void askAssistant();
+              }}
+              className="min-w-0 flex-1 bg-transparent px-4 text-sm outline-none placeholder:text-muted-foreground/50"
+              placeholder="Ask about privacy, security, or Eolv…"
+            />
+            <button
+              onClick={() => void askAssistant()}
+              disabled={loading || !prompt.trim()}
+              className="glass-strong inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Send className="h-4 w-4" strokeWidth={1.5} />
+              Ask
+            </button>
+          </div>
+        </div>
+      </Reveal>
+    </div>
+  );
+}
+
 /* ---------- Games ---------- */
 
 function GamesPage() {
@@ -569,7 +690,8 @@ function GamesPage() {
           Every OS deserves a <span className="italic text-warm-glow">playground.</span>
         </h1>
         <p className="mt-6 max-w-lg text-muted-foreground">
-          Three tiny games live inside Eolv. Find their icons scattered across this page. Click one to play.
+          Three tiny games live inside Eolv. Find their icons scattered across this page. Click one
+          to play.
         </p>
       </Reveal>
 
@@ -659,8 +781,14 @@ function SnakeGame() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const map: Record<string, [number, number]> = {
-        ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
-        w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0],
+        ArrowUp: [0, -1],
+        ArrowDown: [0, 1],
+        ArrowLeft: [-1, 0],
+        ArrowRight: [1, 0],
+        w: [0, -1],
+        s: [0, 1],
+        a: [-1, 0],
+        d: [1, 0],
       };
       const nd = map[e.key];
       if (!nd) return;
@@ -679,7 +807,13 @@ function SnakeGame() {
         const [hx, hy] = s[0];
         const [dx, dy] = dir.current;
         const nh: [number, number] = [hx + dx, hy + dy];
-        if (nh[0] < 0 || nh[0] >= SIZE || nh[1] < 0 || nh[1] >= SIZE || s.some(([x, y]) => x === nh[0] && y === nh[1])) {
+        if (
+          nh[0] < 0 ||
+          nh[0] >= SIZE ||
+          nh[1] < 0 ||
+          nh[1] >= SIZE ||
+          s.some(([x, y]) => x === nh[0] && y === nh[1])
+        ) {
           setDead(true);
           return s;
         }
@@ -721,7 +855,11 @@ function SnakeGame() {
             <div
               key={i}
               className={`aspect-square rounded-[3px] ${
-                isSnake ? "bg-warm-glow" : isFood ? "bg-warm shadow-[0_0_10px_var(--warm-glow)]" : "bg-white/[0.03]"
+                isSnake
+                  ? "bg-warm-glow"
+                  : isFood
+                    ? "bg-warm shadow-[0_0_10px_var(--warm-glow)]"
+                    : "bg-white/[0.03]"
               }`}
             />
           );
@@ -755,7 +893,8 @@ function BallGame() {
     const loop = () => {
       ctx.clearRect(0, 0, c.width, c.height);
       balls.forEach((b) => {
-        b.x += b.vx; b.y += b.vy;
+        b.x += b.vx;
+        b.y += b.vy;
         if (b.x < b.r || b.x > c.width - b.r) b.vx *= -1;
         if (b.y < b.r || b.y > c.height - b.r) b.vy *= -1;
         const grad = ctx.createRadialGradient(b.x - b.r / 3, b.y - b.r / 3, 2, b.x, b.y, b.r);
@@ -764,7 +903,9 @@ function BallGame() {
         ctx.fillStyle = grad;
         ctx.shadowColor = `oklch(0.7 0.15 ${b.h})`;
         ctx.shadowBlur = 20;
-        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fill();
       });
       raf = requestAnimationFrame(loop);
     };
@@ -782,7 +923,10 @@ function BallGame() {
       setClicks((v) => v + 1);
     };
     c.addEventListener("click", onClick);
-    return () => { cancelAnimationFrame(raf); c.removeEventListener("click", onClick); };
+    return () => {
+      cancelAnimationFrame(raf);
+      c.removeEventListener("click", onClick);
+    };
   }, []);
 
   return (
@@ -804,8 +948,13 @@ function BallGame() {
 
 /* ----- Typing ----- */
 function TypingGame() {
-  const words = "clarity warmth privacy modular cinema quiet glass ecosystem soft light dock hover slide reveal home".split(" ");
-  const [target, setTarget] = useState(() => Array.from({ length: 12 }, () => words[Math.floor(Math.random() * words.length)]).join(" "));
+  const words =
+    "clarity warmth privacy modular cinema quiet glass ecosystem soft light dock hover slide reveal home".split(
+      " ",
+    );
+  const [target, setTarget] = useState(() =>
+    Array.from({ length: 12 }, () => words[Math.floor(Math.random() * words.length)]).join(" "),
+  );
   const [typed, setTyped] = useState("");
   const [start, setStart] = useState<number | null>(null);
   const [done, setDone] = useState(false);
@@ -816,11 +965,18 @@ function TypingGame() {
   }, [typed, target, start]);
 
   const elapsed = start ? (done ? (Date.now() - start) / 1000 : (Date.now() - start) / 1000) : 0;
-  const wpm = start && typed.length ? Math.round((typed.split(" ").filter(Boolean).length / (elapsed / 60)) || 0) : 0;
+  const wpm =
+    start && typed.length
+      ? Math.round(typed.split(" ").filter(Boolean).length / (elapsed / 60) || 0)
+      : 0;
 
   const reset = () => {
-    setTarget(Array.from({ length: 12 }, () => words[Math.floor(Math.random() * words.length)]).join(" "));
-    setTyped(""); setStart(null); setDone(false);
+    setTarget(
+      Array.from({ length: 12 }, () => words[Math.floor(Math.random() * words.length)]).join(" "),
+    );
+    setTyped("");
+    setStart(null);
+    setDone(false);
   };
 
   return (
@@ -834,8 +990,17 @@ function TypingGame() {
       <div className="rounded-2xl bg-black/40 p-6 font-mono text-lg leading-relaxed">
         {target.split("").map((ch, i) => {
           const t = typed[i];
-          const cls = t == null ? "text-muted-foreground/50" : t === ch ? "text-warm-glow" : "text-red-400 underline";
-          return <span key={i} className={cls}>{ch}</span>;
+          const cls =
+            t == null
+              ? "text-muted-foreground/50"
+              : t === ch
+                ? "text-warm-glow"
+                : "text-red-400 underline";
+          return (
+            <span key={i} className={cls}>
+              {ch}
+            </span>
+          );
         })}
       </div>
       <input
@@ -858,7 +1023,7 @@ function TypingGame() {
 
 function PrivacyPage() {
   const stats = [
-    { icon: Server, label: "Servers used", value: "0" },
+    { icon: Server, label: "Optional AI API", value: "1" },
     { icon: Eye, label: "Trackers", value: "0" },
     { icon: Cookie, label: "Cookies set", value: "0" },
   ];
@@ -866,9 +1031,7 @@ function PrivacyPage() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-24">
       <Reveal>
-        <p className="mb-4 text-sm uppercase tracking-[0.3em] text-muted-foreground">
-          Privacy
-        </p>
+        <p className="mb-4 text-sm uppercase tracking-[0.3em] text-muted-foreground">Privacy</p>
         <h1 className="max-w-3xl font-display text-6xl font-light leading-[1.05]">
           No tracking. No server.
           <br />
@@ -898,8 +1061,8 @@ function PrivacyPage() {
           <h3 className="font-display text-3xl">How Eolv thinks about your data</h3>
           <ul className="mt-6 space-y-4 text-muted-foreground">
             {[
-              "This site is 100% static. There is no backend to leak from.",
-              "No analytics, no fingerprinting, no third-party scripts.",
+              "The core site is static. The AI page only sends prompts when you press Ask.",
+              "No analytics and no fingerprinting are added by Eolv.",
               "Anything you type in the games stays in this browser tab.",
               "Close the tab and every trace is gone.",
             ].map((line, i) => (
@@ -938,6 +1101,7 @@ export function EolvLanding() {
     home: <HomePage />,
     about: <AboutPage />,
     features: <FeaturesPage />,
+    ai: <AiPage />,
     games: <GamesPage />,
     privacy: <PrivacyPage />,
   };
